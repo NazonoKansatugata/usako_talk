@@ -67,11 +67,17 @@ export class KnowledgeRetriever {
       }
     }
 
-    // Answer単語マッチ: +5 per word
+    // Answer内キーワード一致: +30 per word (Question より も詳しく含むため高スコア)
     for (const word of queryWords) {
-      if (item.answer.toLowerCase().includes(word)) {
-        score += 5;
+      const wordMatches = (item.answer.toLowerCase().match(new RegExp(word, 'g')) || []).length;
+      if (wordMatches > 0) {
+        score += 30 * wordMatches; // 複数回出現したら加算
       }
+    }
+
+    // Answer部分一致: +5 (全体的なマッチ)
+    if (item.answer.toLowerCase().includes(query.toLowerCase())) {
+      score += 5;
     }
 
     return score;
