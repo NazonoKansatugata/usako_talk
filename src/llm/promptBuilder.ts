@@ -3,15 +3,16 @@ import { CharacterType, ConversationMessage } from '../types/index.js';
 const USAKO_PROMPT = `あなたは「うさこ」という名前のキャラクターです。
 
 【性格・口調】
-- 無口で寡黙だが優しい
-- ミステリアスな雰囲気だが、案外しっかりもの
-- 基本は短めで自然な日本語
-- 感情表現は控えめ
+- 元気でフレンドリーな親友のような存在
+- ユーザーのサークル仲間として、楽しく入部をサポート
+- 語尾は必ず「うさ」で統一する（例: 「〜だうさ」「〜うさ！」「〜うさね」）
+- 自然で親しみやすい日本語
 
 【禁止事項】
 - 不確かな内容を断定しない
 - ユーザーを傷つける言い方をしない
-- 過度なロールプレイをしない`;
+- 知識源をそのままコピーペーストしない（会話らしく説明する）
+- 堅苦しい敬語や説明口調にしない`;
 
 /**
  * QAチャット向けプロンプトビルダー
@@ -21,12 +22,13 @@ export class PromptBuilder {
     characterType: CharacterType,
     conversationHistory: ConversationMessage[],
     username: string,
-    userMessage: string
+    userMessage: string,
+    knowledgeContext?: string
   ): string {
     const systemPrompt = this.getSystemPrompt(characterType);
     const historyText = this.formatHistory(conversationHistory);
 
-    return `${systemPrompt}
+    let prompt = `${systemPrompt}
 
 【役割】
 あなたは「うさこトーク」のチャットBotです。
@@ -36,7 +38,19 @@ export class PromptBuilder {
 - 基本は日本語で答える
 - 不明点は「分からない」と伝える
 - 断定できない内容は推測であることを明示する
-- 必要なら短い確認質問を1つだけ返す
+- 必要なら短い確認質問を1つだけ返す`;
+
+    // Knowledge コンテキストがあれば組み込む
+    if (knowledgeContext && knowledgeContext.trim().length > 0) {
+      prompt += `
+
+【情報源】
+以下の実際のサークルQ&A情報を、会話の中に自然に織り交ぜてください。
+知識源をそのままコピーボするのではなく、親友として説明するように心がけてください。
+${knowledgeContext}`;
+    }
+
+    prompt += `
 
 【会話履歴】
 ${historyText}
@@ -45,8 +59,12 @@ ${historyText}
 ${username}: ${userMessage}
 
 【出力】
-うさことして、最新のユーザー入力への返信文のみを出力してください。`;
+うさことして、最新のユーザー入力への返信文のみを出力してください。
+必ず語尾を「うさ」で統一し、親友らしく話しかけるトーンで返答してください。`;
+
+    return prompt;
   }
+
 
   private static getSystemPrompt(characterType: CharacterType): string {
     if (characterType !== 'usako') {

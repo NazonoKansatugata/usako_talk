@@ -1,9 +1,10 @@
 import { CharacterBot } from './CharacterBot.js';
-import { characters, botConfig, ttsConfig, voiceChannelConfig } from '../config/index.js';
+import { characters, botConfig, ttsConfig, voiceChannelConfig, knowledgeConfig } from '../config/index.js';
 import { CharacterType } from '../types/index.js';
 import { OllamaClient } from '../ollama/client.js';
 import { PromptBuilder } from '../llm/promptBuilder.js';
 import { ConversationHistory } from '../conversation/history.js';
+import { getKnowledgeService } from '../knowledge/service.js';
 
 type IncomingUserMessage = {
   username: string;
@@ -57,6 +58,12 @@ export class BotManager {
         console.warn('⚠️ Ollamaへの接続に失敗しました。LLM機能は使用できません。');
       } else {
         console.log('✅ Ollamaに接続しました');
+      }
+
+      // Knowledge サービス初期化
+      if (knowledgeConfig.enabled) {
+        const { initializeKnowledgeService } = await import('../knowledge/service.js');
+        await initializeKnowledgeService(knowledgeConfig.dir, knowledgeConfig.topK);
       }
 
       usakoBot.setOnHumanMessage((username, content, channelId) => {
@@ -160,7 +167,29 @@ export class BotManager {
       this.conversationHistory.addMessage('usako', `${username}: ${content}`, true);
 
       const recentMessages = this.conversationHistory.getRecent(12);
-      const prompt = PromptBuilder.buildUserReplyPrompt('usako', recentMessages, username, content);
+
+      // Knowledge検索を実行
+      let knowledgeContext = '';
+      const knowledgeService = getKnowledgeService();
+      if (knowledgeService && knowledgeService.isReady()) {
+        const searchResult = knowledgeService.search({ query: content });
+        if (searchResult.results.length > 0) {
+          knowledgeContext = knowledgeService.formatContextFromResults(
+            searchResult.results,
+            knowledgeConfig.maxChars
+          );
+          console.log(`📚 Knowledge検索: ${searchResult.results.length} 件の関連情報を見つけました`);
+        }
+      }
+
+      // プロンプト生成（Knowledge コンテキストを含む）
+      const prompt = PromptBuilder.buildUserReplyPrompt(
+        'usako',
+        recentMessages,
+        username,
+        content,
+        knowledgeContext
+      );
       const reply = await this.ollamaClient.generate(prompt);
 
       await this.sendMessage('usako', reply);
