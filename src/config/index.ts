@@ -61,6 +61,5 @@ export const ttsConfig: TTSConfig = {
  * 音声チャンネル設定
  */
 export const voiceChannelConfig: VoiceChannelConfig = {
-  channelId: process.env.VOICE_CHANNEL_ID || '',
   enabled: process.env.VOICE_CHANNEL_ENABLED === 'true',
 };
