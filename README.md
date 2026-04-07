@@ -75,6 +75,26 @@ npm start
 - 生成された返信をうさこBotとして投稿
 - 音声設定が有効なら同内容をVOICEVOXで音声化し、音声チャンネルで再生
 
+## 実際のBotの動き
+
+1. 起動時
+	- `USAKO_BOT_TOKEN` でうさこBotがログイン
+	- `OLLAMA_BASE_URL` に接続確認
+	- `TTS_ENABLED=true` かつ `VOICE_CHANNEL_ENABLED=true` の場合のみ、`VOICE_CHANNEL_ID` へ音声接続
+2. 待機状態
+	- `CHANNEL_ID` のテキスト投稿のみ監視
+	- Bot投稿・空投稿は無視
+3. ユーザー投稿を受信
+	- 投稿をキューに積み、先着順で1件ずつ処理
+	- 直近履歴を含むプロンプトでOllamaへ問い合わせ
+4. 返信
+	- 返信テキストは常に `CHANNEL_ID` に投稿
+	- 音声有効時は返信テキストをVOICEVOXで生成し、接続済み音声チャンネルで再生
+5. 例外時
+	- 生成や送信で失敗した場合は、フォールバック文を `CHANNEL_ID` に返す
+6. 終了時
+	- Ctrl+C/SIGTERMで音声接続を切断してBotを安全に停止
+
 ## 補足
 
 - Firebase連携・自律会話・日報生成・旧QwenTTS関連コードは削除済みです

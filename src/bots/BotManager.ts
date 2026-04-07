@@ -102,13 +102,11 @@ export class BotManager {
       return;
     }
 
-    const targetChannelId = voiceChannelConfig.channelId || botConfig.channelId;
-    await bot.sendMessage(targetChannelId, content);
+    await bot.sendMessage(botConfig.channelId, content);
   }
 
   private enqueueHumanMessage(message: IncomingUserMessage): void {
-    const targetChannelId = voiceChannelConfig.channelId || botConfig.channelId;
-    if (message.channelId !== targetChannelId) {
+    if (message.channelId !== botConfig.channelId) {
       return;
     }
 
