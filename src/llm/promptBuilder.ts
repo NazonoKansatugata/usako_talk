@@ -21,12 +21,13 @@ export class PromptBuilder {
     characterType: CharacterType,
     conversationHistory: ConversationMessage[],
     username: string,
-    userMessage: string
+    userMessage: string,
+    knowledgeContext?: string
   ): string {
     const systemPrompt = this.getSystemPrompt(characterType);
     const historyText = this.formatHistory(conversationHistory);
 
-    return `${systemPrompt}
+    let prompt = `${systemPrompt}
 
 【役割】
 あなたは「うさこトーク」のチャットBotです。
@@ -36,7 +37,19 @@ export class PromptBuilder {
 - 基本は日本語で答える
 - 不明点は「分からない」と伝える
 - 断定できない内容は推測であることを明示する
-- 必要なら短い確認質問を1つだけ返す
+- 必要なら短い確認質問を1つだけ返す`;
+
+    // Knowledge コンテキストがあれば組み込む
+    if (knowledgeContext && knowledgeContext.trim().length > 0) {
+      prompt += `
+
+【参考情報】
+以下の情報は、サークルに関する実際のQ&Aです。
+この情報を優先して使用し、回答の根拠としてください。
+${knowledgeContext}`;
+    }
+
+    prompt += `
 
 【会話履歴】
 ${historyText}
@@ -46,7 +59,10 @@ ${username}: ${userMessage}
 
 【出力】
 うさことして、最新のユーザー入力への返信文のみを出力してください。`;
+
+    return prompt;
   }
+
 
   private static getSystemPrompt(characterType: CharacterType): string {
     if (characterType !== 'usako') {

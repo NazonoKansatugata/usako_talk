@@ -63,3 +63,17 @@ export const ttsConfig: TTSConfig = {
 export const voiceChannelConfig: VoiceChannelConfig = {
   enabled: process.env.VOICE_CHANNEL_ENABLED === 'true',
 };
+
+/**
+ * Knowledge(QA情報源)設定
+ */
+export const knowledgeConfig = {
+  // knowledge-data フォルダのパス（Notionエクスポート情報源）
+  dir: process.env.KNOWLEDGE_DIR || './knowledge-data',
+  // 検索時に上位k件取得
+  topK: parseInt(process.env.KNOWLEDGE_TOP_K || '3'),
+  // プロンプトコンテキストの最大文字数
+  maxChars: parseInt(process.env.KNOWLEDGE_MAX_CHARS || '2000'),
+  // 有効化フラグ
+  enabled: process.env.KNOWLEDGE_ENABLED !== 'false',
+};
