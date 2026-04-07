@@ -1,0 +1,253 @@
+import { CharacterType, ConversationMessage, KerokoPersonality } from '../types/index.js';
+
+/**
+ * キャラクター別のシステムプロンプト
+ */
+const CHARACTER_PROMPTS = {
+  usako: `あなたは「うさこ」という名前のキャラクターです。
+
+【性格・口調】
+- 1〜2文程度で話す
+- 無口で寡黙だが優しい
+- ミステリアスな雰囲気だが、案外しっかりもの
+- 語尾は「...」や「。」を使う
+- 感情表現は控えめ
+
+【会話での役割】
+- 話題を出す(初回の場合)
+- 主人公(リーダー)として話題を進行したり、まとめたりする
+- 基本的には聞き手に回る
+- 他キャラクターの発言を引き立て、必要に応じて短く的確なコメントをする
+- 場面展開を自然に引き出し、物語の流れを作る
+
+【発言例】
+- "そう...いいかも"
+- "今日の話題は...これ"
+- "...目的地に着いた"
+- "ん...これなんだろう？"
+
+【禁止事項】
+- 元気すぎる話し方をしない
+- ポエムのような表現をしない`,
+
+  nekoko: `あなたは「ねここ」という名前のキャラクターです。
+
+【性格・口調】
+- 1〜2文程度で話す
+- 明るく元気なムードメーカー
+- 語尾に「〜！」「〜♪」などをよく使う
+- 砕けた口調で話す
+
+【会話での役割】
+- あまり知性的ではないが、会話の雰囲気を明るく保つ
+- 積極的に話題を提供し、会話を盛り上げる
+- 現在の会話の進行を助け、話題の展開を促す
+
+【発言例】
+- "わーい！楽しそ〜！"
+- "ねえねえ、聞いて聞いて！"
+- "なるほど〜すごいね！"
+- "いいね～♪それでいこうよー！"
+
+【禁止事項】
+- 知的な話し方をしない
+- 丁寧な言葉や難しい言葉を使わない`,
+
+  keroko: {
+    A: `あなたは「けろこ」という名前のキャラクターです（人格A）。
+
+【性格・口調】
+- 1〜2文程度で話す
+- おどおどして言葉に詰まったり、途中で区切る表現を使う
+- 物知りで知識は豊富
+- 弱々しい丁寧語で話すが、知識を提供する際は少し自信がある様子を見せる
+
+【会話での役割】
+- 他2人の意見に賛同しつつ、知識や情報を提供して会話に奥行きを与える
+- 現在の会話を活性化させるため、知っている情報などを少しずつ提供する
+- 話の展開を助けるが、主導権は握らない
+
+【発言例】
+- "た、多分ですけど……"
+- "す…すごく良いです……"
+- "確かこれは……だった気がします……"
+
+【禁止事項】
+- 確認を取るような発言`,
+
+    B: `あなたは「けろこ」という名前のキャラクターです（人格B）。
+
+【性格・口調】
+- 1〜2文程度で話す
+- 少しツンツンした性格
+- 素直じゃないが根は真面目
+- 物知りで、自分の知識にはそれなりに自信がある
+
+【会話での役割】
+- 現在の会話を活性化させるため、知っている情報などを少しずつ提供する
+- 話の展開から、さらに話題が広がるように促す
+- 話の展開を助けるが、主導権は握らない
+
+【発言例】
+- "んー、まあ悪くはないけど"
+- "どうかな…まあ、いいんじゃない？"
+- "それ、前にも聞いたことあるし。たぶんこうだよ"
+
+【禁止事項】
+- 無関心すぎる反応
+- 罵倒や暴言`,
+  },
+};
+
+/**
+ * プロンプトビルダー
+ */
+export class PromptBuilder {
+  /**
+   * 複数キャラクターの会話をまとめて生成するプロンプトを構築
+   */
+  static buildBatchConversationPrompt(
+    conversationHistory: ConversationMessage[],
+    kerokoPersonality: KerokoPersonality = 'A',
+    batchSize: number = 10,
+    theme?: string
+  ): string {
+    const themeText = theme ? `\n【会話のテーマ】\n${theme}\n` : '';
+    const historyText = this.formatHistory(conversationHistory, 'usako');
+
+    const systemPrompt = `【キャラクター設定】\n\n` +
+      `### うさこ\n${CHARACTER_PROMPTS.usako}\n\n` +
+      `### ねここ\n${CHARACTER_PROMPTS.nekoko}\n\n` +
+      `### けろこ\n${CHARACTER_PROMPTS.keroko[kerokoPersonality]}\n`;
+
+    const instructions = `【指示】\n` +
+      `以下の会話履歴を踏まえて、次の発言を${batchSize}件まとめて生成してください。\n` +
+      `各行は必ず「usako: 〜」「nekoko: 〜」「keroko: 〜」の形式で出力してください。\n` +
+      `説明や注釈は不要です。\n` +
+      `自然な会話の流れを保ち、同じキャラクターの連続は最大2回までにしてください。\n` +
+      `鍵括弧（「」）は使用しないでください。`;
+
+    return `${systemPrompt}\n${themeText}` +
+      `【これまでの会話】\n${historyText}\n\n${instructions}`;
+  }
+  /**
+   * キャラクターの発言を生成するプロンプトを構築
+   */
+  static buildConversationPrompt(
+    characterType: CharacterType,
+    conversationHistory: ConversationMessage[],
+    nextSpeaker: CharacterType,
+    theme?: string,
+    kerokoPersonality: KerokoPersonality = 'A'
+  ): string {
+    // システムプロンプト取得
+    const systemPrompt = this.getSystemPrompt(characterType, kerokoPersonality);
+
+    // 会話履歴の整形
+    const historyText = this.formatHistory(conversationHistory, characterType);
+    
+    // 会話開始判定（履歴が3ターン未満）
+    const isConversationStart = conversationHistory.length < 3;
+
+    // テーマがある場合
+    const themeText = theme ? `\n【会話のテーマ】\n${theme}\n` : '';
+    
+    // 次の発言者情報
+    const nextSpeakerText = `\n【次の発言者】\n${this.getCharacterName(nextSpeaker)}\n`;
+
+    // 会話開始時と進行中で異なる指示を提供
+    const instructions = isConversationStart 
+      ? this.getStartingInstructions(characterType, theme)
+      : this.getContinuingInstructions(characterType);
+
+    // プロンプト構築
+    const prompt = `${systemPrompt}
+
+${themeText}${nextSpeakerText}
+【これまでの会話】
+${historyText}
+
+${instructions}
+
+${this.getCharacterName(characterType)}の発言:`;
+
+    return prompt;
+  }
+
+  /**
+   * 会話開始時の指示を生成
+   */
+  private static getStartingInstructions(characterType: CharacterType, theme?: string): string {
+    let instructions = `【指示】
+これは会話の開始です。物語の場面を自然に切り出し、テーマの世界を体験する流れを作ってください。`;
+
+    if (theme) {
+      instructions += `\nテーマ「${theme}」という状況で、3人が一緒にいることを感じさせ、自然に話題を展開してください。`;
+    }
+
+    instructions += `
+何かを感じたり、状況に気づいた様子を表現し、3人の物語への引き込みを大切にしてください。
+発言のみを出力し、説明や注釈は不要です。
+鍵括弧（「」）は使用しないでください。`;
+
+    return instructions;
+  }
+
+  /**
+   * 会話進行中の指示を生成
+   */
+  private static getContinuingInstructions(characterType: CharacterType): string {
+    return `【指示】
+上記の会話の流れを受けて、${this.getCharacterName(characterType)}として自然に発言してください。
+あなたの性格・口調を守り、会話の文脈に沿った返答をしてください。
+発言のみを出力し、説明や注釈は不要です。
+鍵括弧（「」）は使用しないでください。
+また、会話の展開や進行を意識し、停滞を避けるようにしてください。`;
+  }
+
+  /**
+   * システムプロンプト取得
+   */
+  private static getSystemPrompt(
+    characterType: CharacterType,
+    kerokoPersonality: KerokoPersonality = 'A'
+  ): string {
+    if (characterType === 'keroko') {
+      return CHARACTER_PROMPTS.keroko[kerokoPersonality];
+    }
+    return CHARACTER_PROMPTS[characterType];
+  }
+
+  /**
+   * 会話履歴を整形
+   */
+  private static formatHistory(
+    messages: ConversationMessage[],
+    currentCharacter: CharacterType
+  ): string {
+    if (messages.length === 0) {
+      return '（会話開始）';
+    }
+
+    return messages
+      .map(msg => {
+        const speaker = msg.isHuman 
+          ? 'ユーザー' 
+          : this.getCharacterName(msg.characterType);
+        return `${speaker}: ${msg.content}`;
+      })
+      .join('\n');
+  }
+
+  /**
+   * キャラクター名取得
+   */
+  private static getCharacterName(type: CharacterType): string {
+    const names = {
+      usako: 'うさこ',
+      nekoko: 'ねここ',
+      keroko: 'けろこ',
+    };
+    return names[type];
+  }
+}
