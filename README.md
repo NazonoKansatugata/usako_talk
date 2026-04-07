@@ -49,7 +49,6 @@ VOICE_CHANNEL_ENABLED=false
 TTS_ENABLED=true
 TTS_API_URL=http://127.0.0.1:50021
 VOICEVOX_SPEAKER_ID=46
-VOICE_CHANNEL_ID=...
 VOICE_CHANNEL_ENABLED=true
 ```
 
@@ -68,6 +67,12 @@ npm run build
 npm start
 ```
 
+## Discord 側の必須設定
+
+- Discord Developer Portal で `MESSAGE CONTENT INTENT` を有効化してください
+- これが無効だと、うさこトークはユーザーメッセージ本文を読めないため起動に失敗します
+- 音声機能を使う場合は、サーバー側で `Connect` と `Speak` 権限も必要です
+
 ## 動作仕様
 
 - Botは起動後、指定チャンネルのユーザーメッセージを待機
@@ -80,7 +85,8 @@ npm start
 1. 起動時
 	- `USAKO_BOT_TOKEN` でうさこBotがログイン
 	- `OLLAMA_BASE_URL` に接続確認
-	- `TTS_ENABLED=true` かつ `VOICE_CHANNEL_ENABLED=true` の場合のみ、`VOICE_CHANNEL_ID` へ音声接続
+	- `TTS_ENABLED=true` かつ `VOICE_CHANNEL_ENABLED=true` の場合のみ、`CHANNEL_ID` へ音声接続
+	- `MESSAGE CONTENT INTENT` が無効だとログインできず停止
 2. 待機状態
 	- `CHANNEL_ID` のテキスト投稿のみ監視
 	- Bot投稿・空投稿は無視
@@ -98,4 +104,5 @@ npm start
 ## 補足
 
 - Firebase連携・自律会話・日報生成・旧QwenTTS関連コードは削除済みです
+- 音声接続が失敗してもテキスト応答は継続されます
 - VOICEVOXセットアップの詳細は VOICE_SETUP.md を参照してください

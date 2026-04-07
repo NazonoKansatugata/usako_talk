@@ -95,6 +95,5 @@ export interface VoiceProfile {
  * 音声チャンネル設定
  */
 export interface VoiceChannelConfig {
-  channelId: string;
   enabled: boolean;
 }

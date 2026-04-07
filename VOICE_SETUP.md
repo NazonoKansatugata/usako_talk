@@ -22,7 +22,6 @@ TTS_ENABLED=true
 TTS_API_URL=http://127.0.0.1:50021
 VOICEVOX_SPEAKER_ID=46
 
-VOICE_CHANNEL_ID=your_voice_channel_id
 VOICE_CHANNEL_ENABLED=true
 ```
 
@@ -57,7 +56,10 @@ npm run dev
   - VOICEVOX Engine の起動状態を確認
   - TTS_API_URL のホスト/ポートを確認
 - 音声が流れない:
-  - VOICE_CHANNEL_ID が正しいか確認
+  - CHANNEL_ID が音声チャンネルIDになっているか確認
   - BotのConnect/Speak権限を確認
 - テキストだけ返る:
   - TTS_ENABLED と VOICE_CHANNEL_ENABLED が true か確認
+- 接続が `AbortError` で落ちる:
+  - 音声チャンネルの接続権限、サーバー設定、ネットワークを確認
+  - テキスト応答は継続されます

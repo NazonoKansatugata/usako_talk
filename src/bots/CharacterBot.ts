@@ -1,4 +1,11 @@
-import { Client, GatewayIntentBits, Message, TextChannel, VoiceChannel } from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Message,
+  PermissionFlagsBits,
+  TextChannel,
+  VoiceChannel,
+} from 'discord.js';
 import { CharacterConfig, CharacterType } from '../types/index.js';
 import { VoiceManager } from '../tts/voiceManager.js';
 import { ttsConfig } from '../config/index.js';
@@ -20,7 +27,7 @@ export class CharacterBot {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildVoiceStates,
+        ...(ttsConfig.enabled ? [GatewayIntentBits.GuildVoiceStates] : []),
       ],
     });
 
@@ -88,6 +95,10 @@ export class CharacterBot {
       await this.client.login(this.config.token);
     } catch (error) {
       console.error(`❌ ${this.config.displayName} のログインに失敗:`, error);
+      if (error instanceof Error && error.message.includes('Used disallowed intents')) {
+        console.error('💡 Discord Developer Portalで Message Content Intent を有効化してください');
+        console.error('💡 TTSを使う場合は音声関連設定も確認してください');
+      }
       throw error;
     }
   }
@@ -141,9 +152,9 @@ export class CharacterBot {
   /**
    * 音声チャンネルに接続
    */
-  async connectToVoiceChannel(guildId: string, channelId: string): Promise<void> {
+  async connectToVoiceChannel(guildId: string, channelId: string): Promise<boolean> {
     if (!this.voiceManager) {
-      return;
+      return false;
     }
 
     try {
@@ -156,11 +167,35 @@ export class CharacterBot {
         throw new Error('音声チャンネルが見つかりません');
       }
 
+      const botUser = this.client.user;
+      if (!botUser) {
+        throw new Error('Botユーザー情報を取得できません');
+      }
+
+      const botPermissions = voiceChannel.permissionsFor(botUser.id);
+      if (!botPermissions) {
+        throw new Error('Botのチャンネル権限を取得できません');
+      }
+
+      if (!botPermissions.has(PermissionFlagsBits.ViewChannel)) {
+        throw new Error('音声チャンネルの閲覧権限がありません (View Channel)');
+      }
+
+      if (!botPermissions.has(PermissionFlagsBits.Connect)) {
+        throw new Error('音声チャンネルへの接続権限がありません (Connect)');
+      }
+
+      if (!botPermissions.has(PermissionFlagsBits.Speak)) {
+        throw new Error('音声チャンネルでの発言権限がありません (Speak)');
+      }
+
       await this.voiceManager.connect(voiceChannel as any, this.client);
       console.log(`✅ [${this.config.displayName}] 音声チャンネル接続完了`);
+      return true;
     } catch (error) {
       console.error(`❌ [${this.config.displayName}] 音声チャンネル接続エラー:`, error);
       console.warn(`⚠️ [${this.config.displayName}] 音声配信機能は無効化されます`);
+      return false;
     }
   }
 

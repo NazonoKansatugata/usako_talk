@@ -64,10 +64,14 @@ export class BotManager {
       });
       console.log('✅ 人間のメッセージハンドラーを設定しました');
 
-      if (ttsConfig.enabled && voiceChannelConfig.enabled && voiceChannelConfig.channelId) {
+      if (ttsConfig.enabled && voiceChannelConfig.enabled) {
         console.log('🔊 うさこBotを音声チャンネルに接続中...');
-        await usakoBot.connectToVoiceChannel(botConfig.guildId, voiceChannelConfig.channelId);
-        console.log('✅ うさこBotの音声チャンネル接続が完了しました');
+        const voiceConnected = await usakoBot.connectToVoiceChannel(botConfig.guildId, botConfig.channelId);
+        if (voiceConnected) {
+          console.log('✅ うさこBotの音声チャンネル接続が完了しました');
+        } else {
+          console.warn('⚠️ うさこBotの音声チャンネル接続に失敗しました。テキスト応答のみで継続します');
+        }
       }
     } catch (error) {
       console.error('❌ Botの初期化に失敗しました:', error);
@@ -163,9 +167,9 @@ export class BotManager {
       this.conversationHistory.addMessage('usako', reply);
 
       if (ttsConfig.enabled && voiceChannelConfig.enabled) {
-        const usakoBot = this.bots.get('usako');
-        if (usakoBot) {
-          await usakoBot.speak(reply, 'usako');
+        const voiceBot = this.bots.get('usako');
+        if (voiceBot) {
+          await voiceBot.speak(reply, 'usako');
         }
       }
     } catch (error) {
