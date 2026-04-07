@@ -1,20 +1,7 @@
 import { config } from 'dotenv';
-import { CharacterConfig, BotConfig, OllamaConfig, KerokoPersonality, TTSConfig, VoiceChannelConfig } from '../types/index.js';
+import { CharacterConfig, BotConfig, OllamaConfig, TTSConfig, VoiceChannelConfig } from '../types/index.js';
 
 config();
-
-/**
- * Firebase設定
- */
-export const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY || '',
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.FIREBASE_APP_ID || '',
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID || '',
-};
 
 /**
  * 環境変数の検証
@@ -39,22 +26,6 @@ export const characters: CharacterConfig[] = [
     description: '主人公・ミステリアス担当',
     personality: '無口気味で短文が多い。ミステリアスな雰囲気を持つ。',
   },
-  {
-    name: 'ねここ',
-    type: 'nekoko',
-    token: validateEnv('NEKOKO_BOT_TOKEN'),
-    displayName: 'ねここ',
-    description: 'ムードメーカー',
-    personality: '元気で活発。場を盛り上げるのが得意。',
-  },
-  {
-    name: 'けろこ',
-    type: 'keroko',
-    token: validateEnv('KEROKO_BOT_TOKEN'),
-    displayName: 'けろこ',
-    description: '性格切り替え可能',
-    personality: '選択した人格によって発言傾向が変化する。',
-  },
 ];
 
 /**
@@ -63,12 +34,6 @@ export const characters: CharacterConfig[] = [
 export const botConfig: BotConfig = {
   guildId: validateEnv('GUILD_ID'),
   channelId: validateEnv('CHANNEL_ID'),
-  autoConversationStartHour: parseInt(process.env.AUTO_CONVERSATION_START_HOUR || '10'),
-  autoConversationEndHour: parseInt(process.env.AUTO_CONVERSATION_END_HOUR || '18'),
-  messageIntervalMin: parseInt(process.env.MESSAGE_INTERVAL_MIN || '30'),
-  messageIntervalMax: parseInt(process.env.MESSAGE_INTERVAL_MAX || '120'),
-  reportThreshold: parseInt(process.env.REPORT_THRESHOLD || '20'),
-  kerokoPersonality: (process.env.KEROKO_PERSONALITY || 'A') as KerokoPersonality,
 };
 
 /**
@@ -87,8 +52,9 @@ export const ollamaConfig: OllamaConfig = {
  * TTS設定
  */
 export const ttsConfig: TTSConfig = {
-  apiUrl: process.env.TTS_API_URL || 'http://localhost:11434',
+  apiUrl: process.env.TTS_API_URL || 'http://127.0.0.1:50021',
   enabled: process.env.TTS_ENABLED === 'true',
+  speakerId: parseInt(process.env.VOICEVOX_SPEAKER_ID || '46'),
 };
 
 /**

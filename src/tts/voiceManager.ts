@@ -12,6 +12,7 @@ import { VoiceChannel, Client } from 'discord.js';
 import { CharacterType, VoiceProfile } from '../types/index.js';
 import { TTSClient } from './ttsClient.js';
 import { Readable } from 'stream';
+import { ttsConfig } from '../config/index.js';
 
 /**
  * Discord音声チャンネル管理クラス
@@ -25,27 +26,28 @@ export class VoiceManager {
   private ttsInFlight: number = 0;
   private ttsWaitQueue: Array<() => void> = [];
   private audioQueue: Array<{
+    characterType: CharacterType;
     text: string;
     profile: VoiceProfile;
     streamPromise?: Promise<Readable>;
   }> = [];
 
-  // キャラクターごとの音声プロファイル（Qwen3-TTS CustomVoice対応）
+  // キャラクターごとの音声プロファイル（VOICEVOX style id対応）
   private readonly voiceProfiles: Record<CharacterType, VoiceProfile> = {
     usako: {
-      speaker: 'Serena',      // ミステリアスな女性の声
-      language: 'Japanese',
-      instruct: 'ミステリアスで神秘的なアニメ少女のように、落ち着いた低めのトーンで話してください',
+      speakerId: ttsConfig.speakerId,
+      speed: 1.0,
+      pitch: 0.0,
     },
     nekoko: {
-      speaker: 'Vivian',      // 元気な女性の声
-      language: 'Japanese',
-      instruct: '明るく元気いっぱいのアニメ少女のように、弾むような高めの声で話してください',
+      speakerId: ttsConfig.speakerId,
+      speed: 1.0,
+      pitch: 0.0,
     },
     keroko: {
-      speaker: 'Serena',      // 控え目な女性の声
-      language: 'Japanese',
-      instruct: '控え目で恥ずかしがり屋のアニメ少女のように、優しく小さめの声で話してください',
+      speakerId: ttsConfig.speakerId,
+      speed: 1.0,
+      pitch: 0.0,
     },
   };
 
@@ -175,7 +177,7 @@ export class VoiceManager {
     console.log(`🎤 [${characterType}] 音声キューに追加: "${text}"`);
     
     // キューに追加
-    this.audioQueue.push({ text, profile });
+    this.audioQueue.push({ characterType, text, profile });
     
     // 再生中でなければキュー処理開始
     if (!this.isPlaying) {
@@ -203,7 +205,7 @@ export class VoiceManager {
 
     console.log(`🎤 [${characterType}] 音声キューに追加(先行生成): "${text}"`);
 
-    this.audioQueue.push({ text, profile, streamPromise });
+    this.audioQueue.push({ characterType, text, profile, streamPromise });
 
     if (!this.isPlaying) {
       await this.processQueue();
@@ -228,11 +230,7 @@ export class VoiceManager {
     if (!item) return;
 
     try {
-      // キャラクターのボリュームを取得
-      const characterType = Object.keys(this.voiceProfiles).find(
-        ch => JSON.stringify(this.voiceProfiles[ch as CharacterType]) === JSON.stringify(item.profile)
-      ) as CharacterType | undefined;
-      const volume = characterType ? this.volumeProfiles[characterType] : 0.8;
+      const volume = this.volumeProfiles[item.characterType] ?? 0.8;
 
       // 先行生成があればそれを使用、なければTTS生成
       let audioStream: Readable;
@@ -307,7 +305,7 @@ export class VoiceManager {
    */
   async testTTSConnection(): Promise<boolean> {
     try {
-      console.log('🔍 Qwen3-TTS接続テスト中（音声再生あり）...');
+      console.log('🔍 VOICEVOX接続テスト中（音声再生あり）...');
       
       // 各キャラクターの音声を短くテスト
       await this.speak('テストです', 'usako');

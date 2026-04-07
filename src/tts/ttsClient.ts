@@ -1,85 +1,70 @@
 import { VoiceProfile } from '../types/index.js';
 import { Readable } from 'stream';
-import { execFile } from 'child_process';
-import { createReadStream, unlinkSync } from 'fs';
-import { resolve } from 'path';
-import { promisify } from 'util';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const execFileAsync = promisify(execFile);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-interface Qwen3Response {
-  status: string;
-  output_path?: string;
-  sample_rate?: number;
-  duration_ms?: number;
-  error?: string;
-}
+import { ttsConfig } from '../config/index.js';
 
 /**
- * Qwen3-TTS クライアント
- * Python qwen-tts パッケージを使用した音声合成
+ * VOICEVOX クライアント
+ * ローカルのVOICEVOX Engine HTTP APIを利用した音声合成
  */
 export class TTSClient {
-  private wrapperPyPath: string;
+  private apiUrl: string;
 
   constructor() {
-    this.wrapperPyPath = resolve(__dirname, 'qwen3-wrapper.py');
+    this.apiUrl = ttsConfig.apiUrl;
   }
 
   /**
    * テキストを音声データに変換
    * @param text 読み上げるテキスト
-   * @param voiceProfile 音声プロファイル（スピーカー、言語）
+   * @param voiceProfile 音声プロファイル
    * @returns 音声データのストリーム
    */
   async textToSpeech(text: string, voiceProfile: VoiceProfile): Promise<Readable> {
+    const speakerId = voiceProfile.speakerId ?? ttsConfig.speakerId;
     const textTruncated = text.substring(0, 50);
-    console.log(`🎤 TTS生成開始 [${voiceProfile.speaker}]: "${textTruncated}${text.length > 50 ? '...' : ''}"`);
+    console.log(`🎤 VOICEVOX生成開始 [speaker:${speakerId}]: "${textTruncated}${text.length > 50 ? '...' : ''}"`);
     
     try {
-      // Pythonラッパーを実行（output_pathは省略してPython側でtempfile自動生成）
-      const args = [
-        this.wrapperPyPath,
-        text,
-        voiceProfile.speaker,
-        voiceProfile.language || 'Japanese',
-        voiceProfile.instruct || 'none',
-      ];
-      const { stdout, stderr } = await execFileAsync('python', args);
+      const audioQueryResponse = await fetch(
+        `${this.apiUrl}/audio_query?text=${encodeURIComponent(text)}&speaker=${speakerId}`,
+        { method: 'POST' }
+      );
 
-      // 標準エラー出力を表示（進捗ログ）
-      if (stderr) {
-        console.log(`📌 TTS出力: ${stderr.trim()}`);
+      if (!audioQueryResponse.ok) {
+        throw new Error(`VOICEVOX audio_query error: ${audioQueryResponse.status} ${audioQueryResponse.statusText}`);
       }
 
-      // JSONレスポンスをパース（stdoutの最後の行から取得）
-      const lines = stdout.trim().split('\n');
-      const jsonLine = lines[lines.length - 1];
-      const result: Qwen3Response = JSON.parse(jsonLine);
-      
-      if (result.status !== 'success') {
-        throw new Error(`TTS Error: ${result.error}`);
+      const audioQuery = await audioQueryResponse.json() as Record<string, unknown>;
+
+      // 任意の速度・ピッチ指定があれば反映
+      if (typeof voiceProfile.speed === 'number') {
+        audioQuery.speedScale = voiceProfile.speed;
+      }
+      if (typeof voiceProfile.pitch === 'number') {
+        audioQuery.pitchScale = voiceProfile.pitch;
       }
 
-      console.log(`✅ TTS生成完了 (${result.duration_ms}ms)`);
-
-      // ファイルをストリームで返す
-      // 完了後にファイルを削除
-      const stream = createReadStream(result.output_path!);
-      stream.on('end', () => {
-        try {
-          unlinkSync(result.output_path!);
-          console.log(`🗑️ 一時ファイル削除: ${result.output_path!}`);
-        } catch (err) {
-          console.warn(`⚠️ 一時ファイル削除失敗: ${err}`);
+      const synthesisResponse = await fetch(
+        `${this.apiUrl}/synthesis?speaker=${speakerId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(audioQuery),
         }
-      });
+      );
 
-      return stream;
+      if (!synthesisResponse.ok) {
+        throw new Error(`VOICEVOX synthesis error: ${synthesisResponse.status} ${synthesisResponse.statusText}`);
+      }
+
+      const wavBuffer = Buffer.from(await synthesisResponse.arrayBuffer());
+
+      console.log('✅ VOICEVOX生成完了');
+
+      return Readable.from(wavBuffer);
+
     } catch (error) {
       console.error('❌ TTS生成エラー:', error);
       throw error;
@@ -109,21 +94,16 @@ export class TTSClient {
    */
   async testConnection(): Promise<boolean> {
     try {
-      console.log('🔍 Qwen3-TTSモデルの接続テスト中...');
-      
-      // ダミーテキストで実行
-      const stream = await this.textToSpeech('テスト', {
-        speaker: 'Vivian',
-        language: 'Japanese',
-      });
-      
-      // ストリームが生成されたら成功
-      stream.destroy(); // すぐに破棄
-      console.log('✅ Qwen3-TTS接続テスト成功');
+      console.log('🔍 VOICEVOX接続テスト中...');
+      const response = await fetch(`${this.apiUrl}/speakers`);
+      if (!response.ok) {
+        throw new Error(`VOICEVOX接続失敗: ${response.status} ${response.statusText}`);
+      }
+      console.log('✅ VOICEVOX接続テスト成功');
       return true;
       
     } catch (error) {
-      console.error('❌ Qwen3-TTS接続テスト エラー:', error);
+      console.error('❌ VOICEVOX接続テスト エラー:', error);
       return false;
     }
   }

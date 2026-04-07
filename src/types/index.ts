@@ -1,23 +1,7 @@
 /**
- * お題データ
- */
-export interface Theme {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  keywords: string[];
-}
-
-/**
  * キャラクターの種類
  */
 export type CharacterType = 'usako' | 'nekoko' | 'keroko';
-
-/**
- * けろこの人格タイプ
- */
-export type KerokoPersonality = 'A' | 'B';
 
 /**
  * キャラクター設定
@@ -48,12 +32,6 @@ export interface ConversationMessage {
 export interface BotConfig {
   guildId: string;
   channelId: string;
-  autoConversationStartHour: number;
-  autoConversationEndHour: number;
-  messageIntervalMin: number;
-  messageIntervalMax: number;
-  reportThreshold: number;
-  kerokoPersonality: KerokoPersonality;
 }
 
 /**
@@ -90,50 +68,27 @@ export interface GenerateResponse {
   model: string;
   created_at: string;
   response: string;
-  thinking?: string;  // qwen3のthinking mode対応
+  thinking?: string;
   done: boolean;
   done_reason?: string;
 }
 
 /**
- * 日報レポート
+ * TTS設定
  */
-export interface DailyReport {
-  id?: string;
-  characterType: CharacterType;
-  characterName: string;
-  content: string;
-  timestamp: Date;
-  messageCount: number;
-}
-
-/**
- * Qwen3-TTS設定
- */
-export interface Qwen3TTSConfig {
-  modelName: string;  // "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
-  deviceMap: string;  // "cuda:0" or "cpu"
-  dtype: string;      // "torch.bfloat16" or "torch.float16"
+export interface TTSConfig {
+  apiUrl: string;
   enabled: boolean;
+  speakerId: number;
 }
 
 /**
- * 音声プロファイル (Qwen3 CustomVoice用)
+ * 音声プロファイル
  */
 export interface VoiceProfile {
-  speaker: string;    // Qwen3スピーカー: "Vivian", "Serena", "Ryan" など
-  language: string;   // "Japanese", "English", "Auto"
-  instruct?: string;  // 音声命令（オプション）
-  pitch?: number;     // 音の高さ調整（オプション、将来用）
-  speed?: number;     // 話す速度調整（オプション、将来用）
-}
-
-/**
- * TTS リクエスト
- */
-export interface TTSRequest {
-  text: string;
-  voiceProfile: VoiceProfile;
+  speakerId?: number;
+  pitch?: number;
+  speed?: number;
 }
 
 /**
